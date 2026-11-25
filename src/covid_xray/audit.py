@@ -14,10 +14,15 @@ def mask_region(image: np.ndarray, box: tuple[int, int, int, int], *, fill: floa
     return result
 
 
-def mask_variants(image: np.ndarray, box: tuple[int, int, int, int],
-                  corner: tuple[int, int, int, int]) -> dict[str, np.ndarray]:
+def mask_variants(
+    image: np.ndarray, box: tuple[int, int, int, int], corner: tuple[int, int, int, int]
+) -> dict[str, np.ndarray]:
     center_only = np.zeros_like(image)
     r0, r1, c0, c1 = box
     center_only[r0:r1, c0:c1, ...] = image[r0:r1, c0:c1, ...]
-    return {"full": np.array(image, copy=True), "lungs_hidden": mask_region(image, box),
-            "lungs_only": center_only, "corner_hidden": mask_region(image, corner)}
+    return {
+        "full": np.array(image, copy=True),
+        "lungs_hidden": mask_region(image, box),
+        "lungs_only": center_only,
+        "corner_hidden": mask_region(image, corner),
+    }

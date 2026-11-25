@@ -9,8 +9,9 @@ import numpy as np
 from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay
 
 
-def save_evaluation_figures(y_true: np.ndarray, scores: np.ndarray, threshold: float,
-                           output_dir: str | Path) -> None:
+def save_evaluation_figures(
+    y_true: np.ndarray, scores: np.ndarray, threshold: float, output_dir: str | Path
+) -> None:
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     predictions = scores >= threshold
@@ -20,10 +21,12 @@ def save_evaluation_figures(y_true: np.ndarray, scores: np.ndarray, threshold: f
     RocCurveDisplay.from_predictions(y_true, scores)
     plt.savefig(output / "roc_curve.png", bbox_inches="tight")
     plt.close()
-    plt.hist(scores[y_true == 0], bins=20, alpha=.65, label="Normal")
-    plt.hist(scores[y_true == 1], bins=20, alpha=.65, label="COVID")
+    plt.hist(scores[y_true == 0], bins=20, alpha=0.65, label="Normal")
+    plt.hist(scores[y_true == 1], bins=20, alpha=0.65, label="COVID")
     plt.axvline(threshold, color="black", linestyle="--", label=f"Threshold {threshold:.4f}")
-    plt.xlabel("Predicted COVID probability"); plt.ylabel("Images"); plt.legend()
+    plt.xlabel("Predicted COVID probability")
+    plt.ylabel("Images")
+    plt.legend()
     plt.savefig(output / "confidence_histogram.png", bbox_inches="tight")
     plt.close()
 
@@ -43,15 +46,29 @@ def save_masking_figure(metrics: dict[str, float], output_dir: str | Path) -> No
     plt.close()
 
 
-def save_error_gallery(rows, y_true: np.ndarray, scores: np.ndarray, threshold: float,
-                       output_dir: str | Path, image_size: int = 224) -> None:
+def save_error_gallery(
+    rows,
+    y_true: np.ndarray,
+    scores: np.ndarray,
+    threshold: float,
+    output_dir: str | Path,
+    image_size: int = 224,
+) -> None:
     from .data import image_array
 
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     predictions = scores >= threshold
-    groups = (("Missed COVID", [i for i, (y, p) in enumerate(zip(y_true, predictions)) if y == 1 and not p]),
-              ("False alarms", [i for i, (y, p) in enumerate(zip(y_true, predictions)) if y == 0 and p]))
+    groups = (
+        (
+            "Missed COVID",
+            [i for i, (y, p) in enumerate(zip(y_true, predictions, strict=True)) if y == 1 and not p],
+        ),
+        (
+            "False alarms",
+            [i for i, (y, p) in enumerate(zip(y_true, predictions, strict=True)) if y == 0 and p],
+        ),
+    )
     fig, axes = plt.subplots(2, 5, figsize=(15, 6), squeeze=False)
     for row, (title, indices) in enumerate(groups):
         for col, ax in enumerate(axes[row]):

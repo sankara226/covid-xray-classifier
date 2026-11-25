@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
-from sklearn.metrics import (average_precision_score, confusion_matrix, roc_auc_score)
+from sklearn.metrics import average_precision_score, confusion_matrix, roc_auc_score
 
 
 def select_threshold(y_true: np.ndarray, scores: np.ndarray, target_sensitivity: float) -> float:
@@ -28,7 +28,14 @@ def precision_at_prevalence(sensitivity: float, specificity: float, prevalence: 
 def evaluate(y_true: np.ndarray, scores: np.ndarray, threshold: float) -> dict[str, object]:
     y_true, scores = np.asarray(y_true), np.asarray(scores)
     tn, fp, fn, tp = confusion_matrix(y_true, scores >= threshold, labels=[0, 1]).ravel()
-    return {"roc_auc": float(roc_auc_score(y_true, scores)),
-            "pr_auc": float(average_precision_score(y_true, scores)), "threshold": float(threshold),
-            "tp": int(tp), "fp": int(fp), "tn": int(tn), "fn": int(fn),
-            "sensitivity": float(tp / (tp + fn)), "specificity": float(tn / (tn + fp))}
+    return {
+        "roc_auc": float(roc_auc_score(y_true, scores)),
+        "pr_auc": float(average_precision_score(y_true, scores)),
+        "threshold": float(threshold),
+        "tp": int(tp),
+        "fp": int(fp),
+        "tn": int(tn),
+        "fn": int(fn),
+        "sensitivity": float(tp / (tp + fn)),
+        "specificity": float(tn / (tn + fp)),
+    }

@@ -10,28 +10,34 @@ import tensorflow as tf
 
 
 def gradcam(model, image: np.ndarray) -> np.ndarray:
+    """Grad-CAM on the MobileNetV2 output maps, replaying the head so the graph stays connected."""
     backbone = next(layer for layer in model.layers if isinstance(layer, tf.keras.Model))
-    conv = next(layer for layer in reversed(backbone.layers) if isinstance(layer, tf.keras.layers.Conv2D))
-    probe = tf.keras.Model(model.inputs, [conv.output, model.output])
-    batch = tf.convert_to_tensor(image[None, ...], dtype=tf.float32)
+    head = model.layers[model.layers.index(backbone) + 1 :]
+    batch = tf.keras.applications.mobilenet_v2.preprocess_input(
+        tf.convert_to_tensor(image[None, ...], tf.float32)
+    )
     with tf.GradientTape() as tape:
-        activations, prediction = probe(batch, training=False)
-        target = prediction[:, 0]
+        activations = backbone(batch, training=False)
+        tape.watch(activations)
+        x = activations
+        for layer in head:
+            x = layer(x, training=False)
+        target = x[:, 0]
     grads = tape.gradient(target, activations)
     weights = tf.reduce_mean(grads, axis=(1, 2), keepdims=True)
-    heat = tf.reduce_sum(weights * activations, axis=-1)[0]
-    heat = tf.maximum(heat, 0) / (tf.reduce_max(heat) + 1e-8)
+    heat = tf.nn.relu(tf.reduce_sum(weights * activations, axis=-1))[0]
+    heat = heat / (tf.reduce_max(heat) + 1e-8)
     return tf.image.resize(heat[..., None], image.shape[:2]).numpy()[..., 0]
 
 
 def save_gradcam_grid(model, images: list[np.ndarray], labels: list[str], output: str | Path) -> None:
     count = len(images)
     fig, axes = plt.subplots(2, count, figsize=(3 * count, 6), squeeze=False)
-    for i, (image, label) in enumerate(zip(images, labels)):
+    for i, (image, label) in enumerate(zip(images, labels, strict=True)):
         axes[0, i].imshow(np.clip(image / 255, 0, 1))
         axes[0, i].set_title(label)
         axes[1, i].imshow(np.clip(image / 255, 0, 1))
-        axes[1, i].imshow(gradcam(model, image), cmap="jet", alpha=.4)
+        axes[1, i].imshow(gradcam(model, image), cmap="jet", alpha=0.4)
         axes[0, i].axis("off")
         axes[1, i].axis("off")
     Path(output).parent.mkdir(parents=True, exist_ok=True)

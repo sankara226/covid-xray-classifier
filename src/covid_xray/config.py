@@ -25,8 +25,12 @@ class Config:
     training: dict[str, int]
 
 
-def load_config(path: str | Path = "configs/default.yaml", *, data_dir: str | Path | None = None,
-                max_per_class: int | None = None) -> Config:
+def load_config(
+    path: str | Path = "configs/default.yaml",
+    *,
+    data_dir: str | Path | None = None,
+    max_per_class: int | None = None,
+) -> Config:
     """Load YAML settings and reject invalid split or image parameters."""
     raw: dict[str, Any] = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     val, test = float(raw["validation_fraction"]), float(raw["test_fraction"])
@@ -44,7 +48,17 @@ def load_config(path: str | Path = "configs/default.yaml", *, data_dir: str | Pa
     selected_max = int(raw["max_per_class"] if max_per_class is None else max_per_class)
     if selected_max < 1:
         raise ValueError("max_per_class must be positive")
-    return Config(int(raw["seed"]), int(raw["image_size"]), int(raw["batch_size"]),
-                  selected_max, val, test, sensitivity,
-                  Path(data_dir) if data_dir else Path(raw["data_dir"]), Path(raw["artifacts_dir"]),
-                  Path(raw["figure_dir"]), mask, dict(raw["training"]))
+    return Config(
+        int(raw["seed"]),
+        int(raw["image_size"]),
+        int(raw["batch_size"]),
+        selected_max,
+        val,
+        test,
+        sensitivity,
+        Path(data_dir) if data_dir else Path(raw["data_dir"]),
+        Path(raw["artifacts_dir"]),
+        Path(raw["figure_dir"]),
+        mask,
+        dict(raw["training"]),
+    )

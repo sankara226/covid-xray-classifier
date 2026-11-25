@@ -7,8 +7,9 @@ from pathlib import Path
 import numpy as np
 
 
-def build_dataset(rows: list[tuple[Path, int]], *, image_size: int, batch_size: int,
-                 training: bool, seed: int):
+def build_dataset(
+    rows: list[tuple[Path, int]], *, image_size: int, batch_size: int, training: bool, seed: int
+):
     import tensorflow as tf
 
     paths = [str(path) for path, _ in rows]

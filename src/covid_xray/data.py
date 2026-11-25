@@ -23,20 +23,32 @@ def seed_everything(seed: int) -> None:
     np.random.seed(seed)
     try:
         import tensorflow as tf
+
         tf.random.set_seed(seed)
     except ImportError:
         LOGGER.info("TensorFlow is unavailable; seeded Python and NumPy")
 
 
-def discover_images(data_dir: str | Path) -> list[tuple[Path, int]]:
+def dataset_root(data_dir: str | Path) -> Path:
+    """Locate the folder holding COVID/ and Normal/, which Kaggle nests one level down."""
     root = Path(data_dir)
     if not all((root / cls).exists() for cls in CLASSES):
         candidates = [p for p in root.rglob("COVID") if p.is_dir() and (p.parent / "Normal").is_dir()]
         if candidates:
             root = candidates[0].parent
-    rows = [(p, label) for label, cls in enumerate(CLASSES)
-            for p in sorted((root / cls / "images").glob("*") if (root / cls / "images").exists()
-                            else (root / cls).glob("*")) if p.suffix.lower() in {".png", ".jpg", ".jpeg"}]
+    return root
+
+
+def discover_images(data_dir: str | Path) -> list[tuple[Path, int]]:
+    root = dataset_root(data_dir)
+    rows = [
+        (p, label)
+        for label, cls in enumerate(CLASSES)
+        for p in sorted(
+            (root / cls / "images").glob("*") if (root / cls / "images").exists() else (root / cls).glob("*")
+        )
+        if p.suffix.lower() in {".png", ".jpg", ".jpeg"}
+    ]
     if not rows:
         raise FileNotFoundError(f"No COVID/Normal images found under {root}")
     return rows
@@ -64,8 +76,14 @@ def deduplicate(rows: list[tuple[Path, int]]) -> list[tuple[Path, int]]:
     return kept
 
 
-def split_data(rows: list[tuple[Path, int]], *, seed: int, max_per_class: int,
-               validation_fraction: float, test_fraction: float) -> dict[str, list[tuple[Path, int]]]:
+def split_data(
+    rows: list[tuple[Path, int]],
+    *,
+    seed: int,
+    max_per_class: int,
+    validation_fraction: float,
+    test_fraction: float,
+) -> dict[str, list[tuple[Path, int]]]:
     """Balance, stratify, and assert hash-disjoint partitions."""
     import pandas as pd
 
@@ -77,32 +95,47 @@ def split_data(rows: list[tuple[Path, int]], *, seed: int, max_per_class: int,
     balanced = list(balanced_frame.itertuples(index=False, name=None))
     paths = np.array([str(p) for p, _ in balanced])
     labels = np.array([y for _, y in balanced])
-    train_idx, other_idx = train_test_split(np.arange(len(labels)), test_size=validation_fraction + test_fraction,
-                                             stratify=labels, random_state=seed)
+    train_idx, other_idx = train_test_split(
+        np.arange(len(labels)),
+        test_size=validation_fraction + test_fraction,
+        stratify=labels,
+        random_state=seed,
+    )
     rel_test = test_fraction / (validation_fraction + test_fraction)
-    val_idx, test_idx = train_test_split(other_idx, test_size=rel_test, stratify=labels[other_idx], random_state=seed)
-    result = {name: [(Path(paths[i]), int(labels[i])) for i in idx]
-              for name, idx in (("train", train_idx), ("validation", val_idx), ("test", test_idx))}
+    val_idx, test_idx = train_test_split(
+        other_idx, test_size=rel_test, stratify=labels[other_idx], random_state=seed
+    )
+    result = {
+        name: [(Path(paths[i]), int(labels[i])) for i in idx]
+        for name, idx in (("train", train_idx), ("validation", val_idx), ("test", test_idx))
+    }
     hashes = [{file_hash(p) for p, _ in result[name]} for name in result]
     if any(hashes[i] & hashes[j] for i in range(3) for j in range(i + 1, 3)):
         raise AssertionError("Hash duplicate crosses splits")
     return result
 
 
-def prepare(data_dir: str | Path, *, seed: int, max_per_class: int, validation_fraction: float,
-            test_fraction: float, output_dir: str | Path) -> dict[str, list[tuple[Path, int]]]:
+def prepare(
+    data_dir: str | Path,
+    *,
+    seed: int,
+    max_per_class: int,
+    validation_fraction: float,
+    test_fraction: float,
+    output_dir: str | Path,
+) -> dict[str, list[tuple[Path, int]]]:
     rows = deduplicate(discover_images(data_dir))
-    splits = split_data(rows, seed=seed, max_per_class=max_per_class,
-                        validation_fraction=validation_fraction, test_fraction=test_fraction)
+    splits = split_data(
+        rows,
+        seed=seed,
+        max_per_class=max_per_class,
+        validation_fraction=validation_fraction,
+        test_fraction=test_fraction,
+    )
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     np.savez(output / "splits.npz", **{k: np.array([[str(p), y] for p, y in v]) for k, v in splits.items()})
-    root = Path(data_dir)
-    if not all((root / cls).exists() for cls in CLASSES):
-        candidates = [p for p in root.rglob("COVID") if p.is_dir() and (p.parent / "Normal").is_dir()]
-        if candidates:
-            root = candidates[0].parent
-    report = source_report(root)
+    report = source_report(dataset_root(data_dir))
     (output / "source_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return splits
 
@@ -129,9 +162,12 @@ def source_report(data_root: str | Path) -> dict[str, object]:
             match = re.search(pattern, content, flags=re.IGNORECASE)
             if match:
                 normal_subgroups[label] = int(match.group(1))
-    return {"sources_by_class": sources, "shared_sources": shared,
-            "class_and_source_confounded": bool(sources and not shared),
-            "normal_readme_breakdown": normal_subgroups}
+    return {
+        "sources_by_class": sources,
+        "shared_sources": shared,
+        "class_and_source_confounded": bool(sources and not shared),
+        "normal_readme_breakdown": normal_subgroups,
+    }
 
 
 def load_splits(path: str | Path) -> dict[str, list[tuple[Path, int]]]:
