@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this project, cite the dataset papers and this code."
+title: "COVID-19 Chest X-ray Classifier: accuracy, leakage and shortcut learning"
+authors:
+  - name: Drake
+type: software
+license: MIT
+version: 0.1.0
+references:
+  - type: article
+    authors:
+      - family-names: Chowdhury
+        given-names: M. E. H.
+    title: "Can AI help in screening Viral and COVID-19 pneumonia?"
+    journal: IEEE Access
+    year: 2020
+  - type: article
+    authors:
+      - family-names: Rahman
+        given-names: T.
+    title: "Exploring the Effect of Image Enhancement Techniques on COVID-19 Detection using Chest X-ray Images"
+    year: 2021

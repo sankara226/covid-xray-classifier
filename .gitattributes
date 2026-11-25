@@ -1,0 +1,2 @@
+# Keep the original notebook in the repo without it dominating the language statistics
+*.ipynb linguist-documentation

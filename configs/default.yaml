@@ -1,0 +1,18 @@
+seed: 42
+image_size: 224
+batch_size: 32
+max_per_class: 1500
+validation_fraction: 0.15
+test_fraction: 0.15
+target_sensitivity: 0.95
+data_dir: data
+artifacts_dir: artifacts
+figure_dir: reports/figures
+mask:
+  center_box: [56, 168, 56, 168]
+  corner_box: [0, 112, 0, 112]
+training:
+  baseline_epochs: 8
+  frozen_epochs: 8
+  finetune_epochs: 6
+  finetune_layers: 30
